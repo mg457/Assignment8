@@ -61,51 +61,89 @@ public class TwoLayerNN implements Classifier {
 		// now take error and back-propagate from output to hidden nodes
 
 		for (int j = 0; j < examples.size(); j++) {
-			ArrayList<Double> h = hiddenOutputs.get(j); // get hidden outputs
-														// for single example
-			Example ex = examples.get(j); 
-			double vDotH = 0.0;
+			Example ex = examples.get(j);
 
-			for (int i = 0; i < layerTwoWeights.size(); i++) {
+			// get hidden node outputs for single example
+			for(int num = 0; num < numHidden; num++) {
+			ArrayList<Double> h_outputs = hiddenOutputs.get(num);
+			double vDotH = dotProduct(h_outputs, layerTwoWeights); // calculate v dot
+												// h for
+			// this node
+
+			for (int i = 0; i < layerTwoWeights.size()-1; i++) {
 				double oldV = layerTwoWeights.get(i);
-				double hk = h.get(i);
-				vDotH += hk*oldV;
+				double hk = h_outputs.get(i);
+				// Equation describing line below:
 				// v_k = v_k + eta*h_k(y-f(v dot h)) f'(v dot h)
-				//need to calculate v dot h?
+				layerTwoWeights.set(i, oldV + eta * hk * (ex.getLabel() - Math.tanh(vDotH)) * derivative(vDotH));
 			}
-			for (int i = 0; i < layerTwoWeights.size(); i++) {
-				double oldV = layerTwoWeights.get(i);
-				double hk = h.get(i);
-				vDotH += hk*oldV;
-				// v_k = v_k + eta*h_k(y-f(v dot h)) f'(v dot h)
-				//need to calculate v dot h?
-				layerTwoWeights.set(i, oldV + eta*hk*(ex.getLabel()-Math.tanh(vDotH))*(1-Math.tanh(vDotH)));
 			}
 
-		}
-
-		// take that error and back-propagate one more time
-		
-	}
-	
-	public double vDotH(ArrayList<Double> outputs, ArrayList<Double> weights) {
-		double toReturn = 0.0;
-		for (int i = 0; i < weights.size(); i++) {
-			double oldV = weights.get(i);
-			//double hk = h.get(i);
-			//toReturn += hk*oldV;
-			// v_k = v_k + eta*h_k(y-f(v dot h)) f'(v dot h)
-			//need to calculate v dot h?
+			Set<Integer> features = ex.getFeatureSet();
+			Iterator<Integer> iter = features.iterator();
+			ArrayList<Double> featureVals = new ArrayList<Double>();
+			for (int f : features) {
+				featureVals.add((double) f);
+			}
 			
+			// take that error and back-propagate one more time
+			for(int x = 0; x < numHidden; x++){
+				ArrayList<Double> initWeights = hiddenWeights.get(x);
+			// List<Object> features =
+			// Arrays.asList(ex.getFeatureSet().toArray());
+			
+			//for (int i = 0; i < featureVals.size()-1; i++) {
+				double oldWeight = initWeights.get(j);
+				double thisInput = ex.getFeature(featureVals.get(x).intValue());
+				// w_kj = w_kj + eta*xj(input)*f'(w_k dot x)*v_k*f'(v dot
+				// h)(y-f(v dot h))
+				double updateWeight = oldWeight + eta * thisInput * derivative(dotProduct(featureVals, initWeights))
+						* layerTwoWeights.get(x) * derivative(vDotH) * (ex.getLabel() - Math.tanh(vDotH));
+				initWeights.set(j, updateWeight);
+			//}
+			hiddenWeights.set(x, initWeights); // update weights for current
+												// example
 		}
-		return 0.0;
+		}
+
+	}
+
+	/**
+	 * Calculate the derivative of tanh (activation function)
+	 * 
+	 * @param input
+	 * @return 1-tanh(input)^2
+	 */
+	public double derivative(double input) {
+		return (1 - Math.pow(Math.tanh(input), 2));
+	}
+
+	/**
+	 * Calculate the dot product of v and h
+	 * 
+	 * @param outputs
+	 *            a list of h_k's
+	 * @param weights
+	 *            a list of weights
+	 * @return the dot product of the two input lists
+	 */
+	public double dotProduct(ArrayList<Double> outputs, ArrayList<Double> weights) {
+		double toReturn = 0.0;
+		for (int i = 0; i < weights.size() - 1; i++) {
+			if (!(i > outputs.size() - 1)) {
+				double oldV = weights.get(i);
+				double hk = outputs.get(i);
+				toReturn += hk * oldV;
+			}
+		}
+		return toReturn;
 	}
 
 	/**
 	 * Method that initializes all weights to values between -.1 and .1
 	 * 
 	 * @param dataSetSize
-	 *            size of the data set
+	 *            # of examples in the data set
 	 */
 	public void initWeights(int dataSetSize) {
 		// initialize both weight vectors with random values between -0.1 ad 0.1
@@ -144,7 +182,7 @@ public class TwoLayerNN implements Classifier {
 			ArrayList<Double> thisNodeOutputs = new ArrayList<Double>();
 			// loop through features, and the weight vector for each feature
 			for (int n = 0; n < numHidden; n++) {
-				double thisNode = 0.0; // dot product f&h for each node
+				double thisNode = 0.0; // get dot product of f & h for each node
 				ArrayList<Double> weightVec = hiddenWeights.get(n);
 				Set<Integer> features = ex.getFeatureSet();
 				Iterator<Integer> iter = features.iterator();
@@ -168,10 +206,23 @@ public class TwoLayerNN implements Classifier {
 		return nodeOutputs;
 	}
 
+	/**
+	 * Classify example by running the forwards calculation on the data using
+	 * the trained weights.
+	 * 
+	 * @param example
+	 *            Given example to classify
+	 * @return the example's classification
+	 */
 	@Override
 	public double classify(Example example) {
 		// run forwards part of training algorithm on specific example
-		return 0;
+		// input to calculateForward method is ArrayList of examples, so
+		// arbitrarily creating
+		// one in order to avoid duplicating code
+		ArrayList<Example> ex = new ArrayList<Example>();
+		ex.add(example);
+		return calculateForward(ex).get(0);
 	}
 
 	@Override
@@ -221,3 +272,4 @@ public class TwoLayerNN implements Classifier {
 	}
 
 }
+
