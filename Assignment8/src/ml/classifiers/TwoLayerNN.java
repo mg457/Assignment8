@@ -64,46 +64,48 @@ public class TwoLayerNN implements Classifier {
 			Example ex = examples.get(j);
 
 			// get hidden node outputs for single example
-			for(int num = 0; num < numHidden; num++) {
-			ArrayList<Double> h_outputs = hiddenOutputs.get(num);
-			double vDotH = dotProduct(h_outputs, layerTwoWeights); // calculate v dot
-												// h for
-			// this node
+			for (int num = 0; num < numHidden; num++) {
+				ArrayList<Double> h_outputs = hiddenOutputs.get(num);
+				double vDotH = dotProduct(h_outputs, layerTwoWeights); // calculate
+																		// v dot
+				// h for
+				// this node
 
-			for (int i = 0; i < layerTwoWeights.size()-1; i++) {
-				double oldV = layerTwoWeights.get(i);
-				double hk = h_outputs.get(i);
-				// Equation describing line below:
-				// v_k = v_k + eta*h_k(y-f(v dot h)) f'(v dot h)
-				layerTwoWeights.set(i, oldV + eta * hk * (ex.getLabel() - Math.tanh(vDotH)) * derivative(vDotH));
-			}
-			}
+				for (int i = 0; i < numHidden - 1; i++) {
+					double oldV = layerTwoWeights.get(i);
+					double hk = h_outputs.get(i);
+					// Equation describing line below:
+					// v_k = v_k + eta*h_k(y-f(v dot h)) f'(v dot h)
+					layerTwoWeights.set(i, oldV + eta * hk * (ex.getLabel() - Math.tanh(vDotH)) * derivative(vDotH));
+				}
 
-			Set<Integer> features = ex.getFeatureSet();
-			Iterator<Integer> iter = features.iterator();
-			ArrayList<Double> featureVals = new ArrayList<Double>();
-			for (int f : features) {
-				featureVals.add((double) f);
+				Set<Integer> features = ex.getFeatureSet();
+				Iterator<Integer> iter = features.iterator();
+				ArrayList<Double> featureVals = new ArrayList<Double>();
+				for (int f : features) {
+					featureVals.add((double) f);
+				}
+
+				// take that error and back-propagate one more time
+				for (int x = 0; x < numHidden; x++) {
+					ArrayList<Double> initWeights = hiddenWeights.get(x);
+					// List<Object> features =
+					// Arrays.asList(ex.getFeatureSet().toArray());
+
+					// for (int i = 0; i < featureVals.size()-1; i++) {
+					double oldWeight = initWeights.get(j);
+					double thisInput = ex.getFeature(featureVals.get(x).intValue());
+					// w_kj = w_kj + eta*xj(input)*f'(w_k dot x)*v_k*f'(v dot
+					// h)(y-f(v dot h))
+					double updateWeight = oldWeight + eta * thisInput * derivative(dotProduct(featureVals, initWeights))
+							* layerTwoWeights.get(x) * derivative(vDotH) * (ex.getLabel() - Math.tanh(vDotH));
+					initWeights.set(j, updateWeight);
+					// }
+					hiddenWeights.set(x, initWeights); // update weights for
+														// current
+														// example
+				}
 			}
-			
-			// take that error and back-propagate one more time
-			for(int x = 0; x < numHidden; x++){
-				ArrayList<Double> initWeights = hiddenWeights.get(x);
-			// List<Object> features =
-			// Arrays.asList(ex.getFeatureSet().toArray());
-			
-			//for (int i = 0; i < featureVals.size()-1; i++) {
-				double oldWeight = initWeights.get(j);
-				double thisInput = ex.getFeature(featureVals.get(x).intValue());
-				// w_kj = w_kj + eta*xj(input)*f'(w_k dot x)*v_k*f'(v dot
-				// h)(y-f(v dot h))
-				double updateWeight = oldWeight + eta * thisInput * derivative(dotProduct(featureVals, initWeights))
-						* layerTwoWeights.get(x) * derivative(vDotH) * (ex.getLabel() - Math.tanh(vDotH));
-				initWeights.set(j, updateWeight);
-			//}
-			hiddenWeights.set(x, initWeights); // update weights for current
-												// example
-		}
 		}
 
 	}
