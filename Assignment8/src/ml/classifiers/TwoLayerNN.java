@@ -220,11 +220,11 @@ public class TwoLayerNN implements Classifier {
 	public double classify(Example example) {
 		// run forwards part of training algorithm on specific example
 		// input to calculateForward method is ArrayList of examples, so
-		// arbitrarily creating
-		// one in order to avoid duplicating code
+		// arbitrarily creating one in order to avoid duplicating code
 		ArrayList<Example> ex = new ArrayList<Example>();
 		ex.add(example);
-		return calculateForward(ex).get(0);
+		System.out.println("calculated: " + calculateForward(ex).get(0) + " label: " + example.getLabel());
+		return (calculateForward(ex).get(0) > 0) ? 1.0 : -1.0;
 	}
 
 	@Override
